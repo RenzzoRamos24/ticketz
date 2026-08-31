@@ -76,6 +76,15 @@ const UpdateUserService = async ({
     });
   }
 
+  // PALAZ patch — revocación real al cambiar contraseña (Principio I,
+  // excepción tercera; R-017 ya había encontrado que esto nunca pasaba:
+  // cambiar la contraseña no cerraba ninguna sesión abierta). Mismo
+  // criterio que el logout: un solo contador global, isAuth no lo revisa
+  // por request, la revocación se propaga en como máximo 15 minutos.
+  if (password) {
+    await user.increment("tokenVersion");
+  }
+
   await user.reload();
 
   const company = await Company.findByPk(user.companyId);

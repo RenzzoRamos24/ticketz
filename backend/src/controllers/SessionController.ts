@@ -92,6 +92,21 @@ export const remove = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
+  // PALAZ patch — revocación real (Principio I, excepción tercera;
+  // R-069/R-070/R-071). Antes, logout solo borraba la cookie del lado del
+  // cliente: un token de acceso ya emitido, o el propio jrt si alguien lo
+  // hubiera copiado, seguían funcionando hasta vencer por su cuenta. Un
+  // solo logout, global: no distingue dispositivo (decisión de Renzo,
+  // 2026-08-31 — más simple que una tabla de sesiones de refresh-token
+  // aparte). isAuth NO revisa tokenVersion en cada request (decisión
+  // explícita, evita una consulta a la base en el camino más caliente de
+  // Ticketz): la revocación se propaga en como máximo 15 minutos, cuando
+  // el token de acceso vigente venza y se intente refrescar contra
+  // RefreshTokenService, que sí compara tokenVersion.
+  if (req.user?.id) {
+    await User.increment("tokenVersion", { where: { id: req.user.id } });
+  }
+
   res.clearCookie("jrt");
 
   return res.send();

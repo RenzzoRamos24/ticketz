@@ -113,6 +113,9 @@ const messages = {
         avgWaitTime: "Tiempo promedio de espera",
         ticketsOnPeriod: "Atenciones en el período",
         userCurrentStatus: "Estado (Actual)",
+        userConnectionTime: "Conectado desde / Última conexión",
+        userConnectedSince: "Conectado desde {{time}}",
+        userLastSeen: "Última conexión: {{time}}",
         filter: {
           period: "Período",
           custom: "Personalizado",

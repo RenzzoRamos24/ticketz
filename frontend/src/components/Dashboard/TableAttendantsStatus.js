@@ -19,6 +19,7 @@ import ErrorIcon from "@material-ui/icons/Error";
 import Rating from "@material-ui/lab/Rating";
 import { i18n } from "../../translate/i18n";
 import { formatTimeInterval } from "../../helpers/formatTimeInterval.js";
+import pastRelativeDate from "../../helpers/pastRelativeDate";
 
 const useStyles = makeStyles(theme => ({
   on: {
@@ -100,6 +101,22 @@ export default function TableAttendantsStatus(props) {
             <ErrorIcon className={classes.off} />
           )}
         </TableCell>
+        <TableCell align="center">
+          {/* PALAZ patch — "conectado desde"/"última conexión" (ver
+              DashboardService.ts::userReport). No se actualiza en vivo con
+              userOnlineChange: ese evento no trae timestamp (solo
+              {userId, online}), así que este valor refleja la última carga
+              del reporte, no el segundo exacto de un cambio en curso. */}
+          {a.online
+            ? a.onlineSince &&
+              i18n.t("dashboard.userConnectedSince", {
+                time: pastRelativeDate(new Date(a.onlineSince))
+              })
+            : a.lastSeenAt &&
+              i18n.t("dashboard.userLastSeen", {
+                time: pastRelativeDate(new Date(a.lastSeenAt))
+              })}
+        </TableCell>
       </TableRow>
     ));
   }
@@ -128,6 +145,9 @@ export default function TableAttendantsStatus(props) {
             </TableCell>
             <TableCell align="center">
               {i18n.t("dashboard.userCurrentStatus")}
+            </TableCell>
+            <TableCell align="center">
+              {i18n.t("dashboard.userConnectionTime")}
             </TableCell>
           </TableRow>
         </TableHead>

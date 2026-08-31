@@ -1,18 +1,22 @@
-name: Create and publish multi-arch Docker images
+name: Create and publish multi-arch Docker images (fork PALAZ)
 
+# Adaptado del workflow oficial de ticketz-oss/ticketz — mismos pasos, dos
+# cambios: publica bajo el namespace de este fork (RenzzoRamos24), no bajo
+# ticketz-oss, y solo dispara sobre ramas/tags propios del patch de PALAZ —
+# nunca sobre main, para no confundir el fork con un mirror general de
+# upstream (Sistema PALAZ, Principio I, excepción segunda — condición (d):
+# fork versionado y aislado).
 on:
   push:
     branches:
-      - 'main'
-      - 'fix/**'
-      - 'dev'
-      - 'test-**'
+      - 'palaz/**'
     tags:
-      - 'v*.*.*'
+      - 'palaz-v*.*.*'
+
 env:
   REGISTRY: ghcr.io
-  IMAGE_BACKEND: ticketz-oss/ticketz-backend
-  IMAGE_FRONTEND: ticketz-oss/ticketz-frontend
+  IMAGE_BACKEND: renzzoramos24/ticketz-backend
+  IMAGE_FRONTEND: renzzoramos24/ticketz-frontend
 
 jobs:
   build-and-push-images:
@@ -69,9 +73,7 @@ jobs:
             org.opencontainers.image.title=ticketz-backend
           tags: |
             type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=match,pattern=palaz-v(.*),group=1
             type=sha
 
       - name: Docker meta Frontend
@@ -84,9 +86,7 @@ jobs:
             org.opencontainers.image.title=ticketz-frontend
           tags: |
             type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=match,pattern=palaz-v(.*),group=1
             type=sha
 
       - name: Build and push backend Docker image

@@ -49,6 +49,9 @@ type UserStatistics = {
   closedTickets: number;
   averageRating: number;
   online: boolean;
+  // PALAZ patch — ver comentario en userReport()/usersStatusSummary().
+  onlineSince: string | null;
+  lastSeenAt: string | null;
 };
 
 type UserReportData = {
@@ -165,6 +168,43 @@ export async function usersStatusSummary(companyId) {
         ) > 0`),
         "online"
       ],
+      // PALAZ patch — "conectado desde" / "última conexión". No agrega
+      // recolección de datos nueva: UserSocketSessions ya escribe createdAt
+      // (apertura de sesión) y updatedAt (marcado active=false al cerrarse)
+      // por cada conexión/desconexión de socket. Solo se expone lo que ya
+      // se persiste.
+      //
+      // onlineSince: la sesión activa MÁS ANTIGUA entre pestañas/dispositivos
+      // — es la que realmente marca desde cuándo está conectado, no la
+      // última pestaña abierta.
+      [
+        literal(`(
+          SELECT MIN("createdAt")
+          FROM "UserSocketSessions"
+          WHERE "UserSocketSessions"."userId" = "User"."id"
+            AND "UserSocketSessions"."active" = true
+        )`),
+        "onlineSince"
+      ],
+      // lastSeenAt: el cierre de sesión más reciente registrado, sin
+      // importar cuánto tiempo pasó. Si el usuario nunca se conectó, NULL.
+      //
+      // Caveat conocido, no introducido por este patch: al reiniciar el
+      // proceso backend, initIO() marca active=false en bloque para TODAS
+      // las sesiones que hubieran quedado abiertas (limpieza de sesiones
+      // huérfanas de un reinicio anterior). Eso toca su updatedAt al
+      // instante del reinicio, no al de la desconexión real del usuario —
+      // un caso raro (coincide con estar conectado justo cuando el backend
+      // reinicia), documentado para que no sorprenda si aparece.
+      [
+        literal(`(
+          SELECT MAX("updatedAt")
+          FROM "UserSocketSessions"
+          WHERE "UserSocketSessions"."userId" = "User"."id"
+            AND "UserSocketSessions"."active" = false
+        )`),
+        "lastSeenAt"
+      ],
       [fn("COUNT", col("tickets.id")), "openTicketsCount"]
     ],
     where: {
@@ -233,6 +273,29 @@ export async function userReport(companyId: number, start: Date, end: Date) {
             AND "UserSocketSessions"."active" = true
         )`),
         "online"
+      ],
+      // PALAZ patch — mismo par de columnas que usersStatusSummary() más
+      // abajo en este fichero, ver el comentario ahí para el detalle
+      // completo (caveat de reinicio del backend incluido). Esta es la
+      // consulta que alimenta la tabla visual del dashboard
+      // (TableAttendantsStatus.js, vía GET /backend/dashboard/users).
+      [
+        literal(`(
+          SELECT MIN("createdAt")
+          FROM "UserSocketSessions"
+          WHERE "UserSocketSessions"."userId" = "User"."id"
+            AND "UserSocketSessions"."active" = true
+        )`),
+        "onlineSince"
+      ],
+      [
+        literal(`(
+          SELECT MAX("updatedAt")
+          FROM "UserSocketSessions"
+          WHERE "UserSocketSessions"."userId" = "User"."id"
+            AND "UserSocketSessions"."active" = false
+        )`),
+        "lastSeenAt"
       ]
     ],
     where: {

@@ -115,8 +115,6 @@ const messages = {
         ticketsOnPeriod: "Tickets in the period",
         userCurrentStatus: "Current status",
         userConnectionTime: "Connected since / Last seen",
-        userConnectedSince: "Connected since {{time}}",
-        userLastSeen: "Last seen: {{time}}",
         filter: {
           period: "Period",
           custom: "Custom",

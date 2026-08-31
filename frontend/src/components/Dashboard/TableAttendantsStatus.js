@@ -19,7 +19,7 @@ import ErrorIcon from "@material-ui/icons/Error";
 import Rating from "@material-ui/lab/Rating";
 import { i18n } from "../../translate/i18n";
 import { formatTimeInterval } from "../../helpers/formatTimeInterval.js";
-import pastRelativeDate from "../../helpers/pastRelativeDate";
+import { format, parseISO } from "date-fns";
 
 const useStyles = makeStyles(theme => ({
   on: {
@@ -103,19 +103,18 @@ export default function TableAttendantsStatus(props) {
         </TableCell>
         <TableCell align="center">
           {/* PALAZ patch — "conectado desde"/"última conexión" (ver
-              DashboardService.ts::userReport). No se actualiza en vivo con
-              userOnlineChange: ese evento no trae timestamp (solo
-              {userId, online}), así que este valor refleja la última carga
-              del reporte, no el segundo exacto de un cambio en curso. */}
+              DashboardService.ts::userReport). Fecha y hora fijas, sin
+              etiqueta por fila (pedido de Renzo, 2026-08-31): el
+              encabezado de la columna ya dice qué es. No se actualiza en
+              vivo con userOnlineChange: ese evento no trae timestamp
+              (solo {userId, online}), así que este valor refleja la
+              última carga del reporte, no el segundo exacto de un cambio
+              en curso. Mismo patrón de formato que el resto de Ticketz
+              (pages/Connections/index.js: "dd/MM/yy HH:mm"), no el
+              relativo de pastRelativeDate. */}
           {a.online
-            ? a.onlineSince &&
-              i18n.t("dashboard.userConnectedSince", {
-                time: pastRelativeDate(new Date(a.onlineSince))
-              })
-            : a.lastSeenAt &&
-              i18n.t("dashboard.userLastSeen", {
-                time: pastRelativeDate(new Date(a.lastSeenAt))
-              })}
+            ? a.onlineSince && format(parseISO(a.onlineSince), "dd/MM/yy HH:mm")
+            : a.lastSeenAt && format(parseISO(a.lastSeenAt), "dd/MM/yy HH:mm")}
         </TableCell>
       </TableRow>
     ));

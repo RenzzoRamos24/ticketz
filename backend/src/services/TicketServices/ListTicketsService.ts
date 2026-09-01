@@ -3,6 +3,7 @@ import {
   fn,
   where,
   col,
+  literal,
   Filterable,
   Includeable,
   WhereOptions
@@ -32,6 +33,8 @@ interface Request {
   date?: string;
   updatedAt?: string;
   minUpdatedAt?: string;
+  messageDateFrom?: string;
+  messageDateTo?: string;
   showAll?: string;
   userId: string;
   withUnreadMessages?: string;
@@ -62,6 +65,8 @@ const ListTicketsService = async ({
   date,
   updatedAt,
   minUpdatedAt,
+  messageDateFrom,
+  messageDateTo,
   showAll,
   userId,
   withUnreadMessages,
@@ -102,6 +107,11 @@ const ListTicketsService = async ({
       [Op.or]: [{ userId }, { status: "pending" }]
     }
   ];
+
+  // PALAZ patch — bindings para el EXISTS del filtro de fecha, más abajo.
+  // Sequelize los sustituye de forma segura (nunca interpolación de
+  // string a mano) al pasarlos como `replacements` en Ticket.findAll().
+  const replacements: Record<string, Date> = {};
 
   let whereCondition: Filterable["where"] = {
     [Op.and]: andedOrs,
@@ -223,6 +233,38 @@ const ListTicketsService = async ({
         ]
       }
     };
+  }
+
+  // PALAZ patch — filtro de período en la pestaña "Búsqueda" (Principio I,
+  // excepción cuarta; specs/000-despliegue-ticketz-vps/research.md
+  // R-068/R-073; docs/diseno-filtro-fecha-busqueda.md). NO hay campo
+  // dedicado de "última actividad" en Ticket — updatedAt lo comparten
+  // mensajes reales Y acciones administrativas (reasignar, cerrar, sin
+  // relación con mensajes), verificado leyendo UpdateTicketService.ts y
+  // wbotMessageListener.ts. El dato correcto es Message.createdAt.
+  //
+  // Deliberadamente NO se reutiliza el patrón de `date`/`updatedAt` de
+  // arriba, que REEMPLAZAN whereCondition entero — eso descarta status y
+  // queueId ya aplicados (R-062). Este filtro es ADITIVO sobre andedOrs,
+  // mismo patrón que ya usan tags/users más abajo: nunca reemplaza nada,
+  // solo agrega una condición más que se combina por AND con lo que ya
+  // había — incluidas etiquetas, usuario y texto libre si están activos.
+  //
+  // EXISTS en vez de un segundo `include` de la asociación "messages":
+  // searchParam ya usa esa asociación para el texto libre (más arriba);
+  // Sequelize no admite dos `include` separados de la misma asociación
+  // sin conflicto. El EXISTS es independiente, no toca includeCondition.
+  if (messageDateFrom && messageDateTo) {
+    replacements.messageDateFrom = startOfDay(parseISO(messageDateFrom));
+    replacements.messageDateTo = endOfDay(parseISO(messageDateTo));
+
+    andedOrs.push(
+      literal(`EXISTS (
+        SELECT 1 FROM "Messages" m
+        WHERE m."ticketId" = "Ticket"."id"
+          AND m."createdAt" BETWEEN :messageDateFrom AND :messageDateTo
+      )`) as unknown as WhereOptions<Ticket>
+    );
   }
 
   if (withUnreadMessages === "true") {
@@ -350,7 +392,8 @@ const ListTicketsService = async ({
       ["updatedAt", "DESC"],
       ["id", "DESC"]
     ],
-    subQuery: false
+    subQuery: false,
+    replacements
   });
 
   return {

@@ -22,6 +22,10 @@ type IndexQuery = {
   date: string;
   updatedAt?: string;
   minUpdatedAt?: string;
+  // PALAZ patch — filtro de período en "Búsqueda" (Principio I, excepción
+  // cuarta; R-068/R-073).
+  messageDateFrom?: string;
+  messageDateTo?: string;
   showAll: string;
   withUnreadMessages: string;
   notClosed: string;
@@ -50,6 +54,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     date,
     updatedAt,
     minUpdatedAt,
+    messageDateFrom,
+    messageDateTo,
     isSearch,
     searchParam,
     showAll,
@@ -93,6 +99,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     date,
     updatedAt,
     minUpdatedAt,
+    messageDateFrom,
+    messageDateTo,
     showAll,
     userId,
     queueIds,

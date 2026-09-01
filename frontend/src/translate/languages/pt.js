@@ -450,7 +450,9 @@ const messages = {
           search: { title: "Busca" }
         },
         search: {
-          placeholder: "Buscar atendimento e mensagens"
+          placeholder: "Buscar atendimento e mensagens",
+          filterByDateFrom: "De",
+          filterByDateTo: "Até"
         },
         buttons: {
           showAll: "Todos"

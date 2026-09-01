@@ -25,6 +25,7 @@ import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Box, Button } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
+import { DateRangeFilter } from "../DateRangeFilter";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPeopleGroup } from "@fortawesome/free-solid-svg-icons";
 import useSettings from "../../hooks/useSettings";
@@ -129,6 +130,9 @@ const TicketsManagerTabs = () => {
   const [selectedContact, setSelectedContact] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  // PALAZ patch — filtro de período en "Búsqueda" (Principio I, excepción
+  // cuarta; R-068/R-073). null = sin filtro, {from, to} = rango completo.
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   const { getSetting } = useSettings();
   const [showTabGroups, setShowTabGroups] = useState(false);
@@ -197,6 +201,10 @@ const TicketsManagerTabs = () => {
   const handleSelectedUsers = selecteds => {
     const users = selecteds.map(t => t.id);
     setSelectedUsers(users);
+  };
+
+  const handleSelectedDateRange = range => {
+    setSelectedDateRange(range);
   };
 
   return (
@@ -395,6 +403,7 @@ const TicketsManagerTabs = () => {
         {profile === "admin" && (
           <UsersFilter onFiltered={handleSelectedUsers} />
         )}
+        <DateRangeFilter onFiltered={handleSelectedDateRange} />
         <TicketsList
           isSearch={true}
           searchParam={searchParam}
@@ -402,6 +411,8 @@ const TicketsManagerTabs = () => {
           contactId={selectedContact}
           tags={selectedTags}
           users={selectedUsers}
+          messageDateFrom={selectedDateRange?.from}
+          messageDateTo={selectedDateRange?.to}
           selectedQueueIds={selectedQueueIds}
           showTabGroups={showTabGroups}
         />

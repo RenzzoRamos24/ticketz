@@ -452,7 +452,9 @@ const messages = {
         search: {
           placeholder: "Search for ticket and messages",
           filterByTags: "Filter by tags",
-          filterByUsers: "Filter by users"
+          filterByUsers: "Filter by users",
+          filterByDateFrom: "From",
+          filterByDateTo: "To"
         },
         buttons: {
           showAll: "All"

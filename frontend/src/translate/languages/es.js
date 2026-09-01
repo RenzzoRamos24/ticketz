@@ -453,7 +453,9 @@ const messages = {
           search: { title: "Búsqueda" }
         },
         search: {
-          placeholder: "Buscar atención y mensajes"
+          placeholder: "Buscar atención y mensajes",
+          filterByDateFrom: "Desde",
+          filterByDateTo: "Hasta"
         },
         buttons: {
           showAll: "Todos"

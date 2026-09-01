@@ -184,6 +184,10 @@ const TicketsListCustom = props => {
     contactId,
     tags,
     users,
+    // PALAZ patch — filtro de período en "Búsqueda" (Principio I,
+    // excepción cuarta; R-068/R-073).
+    messageDateFrom,
+    messageDateTo,
     showAll,
     selectedQueueIds,
     updateCount,
@@ -219,7 +223,9 @@ const TicketsListCustom = props => {
     contactId,
     tags,
     users,
-    selectedQueueIds
+    selectedQueueIds,
+    messageDateFrom,
+    messageDateTo
   ]);
 
   const {
@@ -241,6 +247,8 @@ const TicketsListCustom = props => {
     contactId,
     tags: JSON.stringify(tags),
     users: JSON.stringify(users),
+    messageDateFrom,
+    messageDateTo,
     queueIds: JSON.stringify(selectedQueueIds)
   });
 
@@ -264,6 +272,13 @@ const TicketsListCustom = props => {
     const shouldUpdateTicket = ticket => {
       return (
         (!isSearch || !searchParam) &&
+        // PALAZ patch (R-068/R-073): igual criterio que el texto libre de
+        // arriba — con el filtro de fecha activo, un ticket que llega por
+        // socket no trae suficiente información para evaluar el EXISTS
+        // contra Message.createdAt del lado del cliente, así que se
+        // suprime el merge en vivo (se ve al volver a buscar), nunca se
+        // arriesga a mostrar un ticket fuera del rango pedido.
+        (!messageDateFrom || !messageDateTo) &&
         (!contactId || ticket.contactId === contactId) &&
         (!tags?.length ||
           tags.some(
@@ -419,6 +434,8 @@ const TicketsListCustom = props => {
     status,
     isSearch,
     searchParam,
+    messageDateFrom,
+    messageDateTo,
     showAll,
     groups,
     showTabGroups,

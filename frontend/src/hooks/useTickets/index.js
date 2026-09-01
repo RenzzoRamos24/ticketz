@@ -15,6 +15,10 @@ const useTickets = ({
   groups,
   date,
   updatedAt,
+  // PALAZ patch — filtro de período en "Búsqueda" (Principio I, excepción
+  // cuarta; R-068/R-073).
+  messageDateFrom,
+  messageDateTo,
   showAll,
   queueIds,
   withUnreadMessages,
@@ -43,6 +47,8 @@ const useTickets = ({
               groups,
               date,
               updatedAt,
+              messageDateFrom,
+              messageDateTo,
               showAll,
               queueIds,
               withUnreadMessages,
@@ -71,6 +77,8 @@ const useTickets = ({
     groups,
     date,
     updatedAt,
+    messageDateFrom,
+    messageDateTo,
     showAll,
     queueIds,
     withUnreadMessages,

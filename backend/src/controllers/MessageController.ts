@@ -153,9 +153,20 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   if (medias) {
     if (channel === "whatsapp") {
+      // Leyenda individual por foto (Principio I, excepcion sexta): una
+      // leyenda por adjunto, emparejada por posicion con `medias` -- nunca
+      // un texto compartido para todo el lote. `captions` llega del
+      // FormData como string (un solo adjunto) o array (varios), mismo
+      // campo repetido una vez por archivo, en el mismo orden.
+      const rawCaptions = req.body.captions;
+      const captions = Array.isArray(rawCaptions)
+        ? rawCaptions
+        : rawCaptions !== undefined
+          ? [rawCaptions]
+          : [];
       await Promise.all(
-        medias.map(async (media: Express.Multer.File) => {
-          await SendWhatsAppMedia({ media, ticket });
+        medias.map(async (media: Express.Multer.File, idx: number) => {
+          await SendWhatsAppMedia({ media, ticket, caption: captions[idx] });
           fs.unlinkSync(media.path);
         })
       );

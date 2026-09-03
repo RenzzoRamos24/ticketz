@@ -104,12 +104,64 @@ const useStyles = makeStyles(theme => ({
 
   viewMediaInputWrapper: {
     display: "flex",
+    flexDirection: "column",
     padding: "10px 13px",
     position: "relative",
-    justifyContent: "space-between",
-    alignItems: "center",
     backgroundColor: "#eee",
     borderTop: "1px solid rgba(0, 0, 0, 0.12)"
+  },
+
+  mediaPreviewHeader: {
+    display: "flex",
+    alignItems: "center",
+    width: "100%"
+  },
+
+  mediaThumbStrip: {
+    display: "flex",
+    flex: 1,
+    overflowX: "auto",
+    gap: 8,
+    padding: "4px 8px"
+  },
+
+  mediaThumb: {
+    flexShrink: 0,
+    width: 56,
+    height: 56,
+    borderRadius: 6,
+    border: "2px solid transparent",
+    overflow: "hidden",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    "& img": {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  },
+
+  mediaThumbActive: {
+    borderColor: theme.palette.primary.main
+  },
+
+  mediaThumbName: {
+    fontSize: 10,
+    padding: 2,
+    textAlign: "center",
+    wordBreak: "break-all"
+  },
+
+  mediaCaptionInput: {
+    width: "100%",
+    marginTop: 8,
+    padding: "6px 10px",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    border: "1px solid #ccc"
   },
 
   emojiBox: {
@@ -804,6 +856,12 @@ const MessageInputCustom = props => {
   const classes = useStyles();
 
   const [medias, setMedias] = useState([]);
+  // Leyenda individual por foto (Principio I, excepcion sexta): un texto
+  // por adjunto, no uno compartido para todo el lote -- emparejado por
+  // posicion con `medias`, mismo indice.
+  const [mediaCaptions, setMediaCaptions] = useState([]);
+  const [mediaPreviews, setMediaPreviews] = useState([]);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [inputMessage, setInputMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -875,6 +933,33 @@ const MessageInputCustom = props => {
     };
   }, [ticketId]);
 
+  // Vista previa por foto + reinicio de leyendas al cambiar la seleccion.
+  // `URL.createObjectURL` no viene poblado por el navegador solo -- hay que
+  // generarlo, y liberarlo (`revokeObjectURL`) cuando la seleccion cambia o
+  // se cancela/envia, para no dejar memoria reservada de mas.
+  useEffect(() => {
+    const urls = medias.map(media =>
+      media?.type?.split("/")[0] === "image"
+        ? URL.createObjectURL(media)
+        : null
+    );
+    setMediaPreviews(urls);
+    setMediaCaptions(medias.map(() => ""));
+    setActiveMediaIndex(0);
+    return () => {
+      urls.forEach(url => url && URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medias]);
+
+  const handleChangeCaption = (idx, value) => {
+    setMediaCaptions(prevCaptions => {
+      const nextCaptions = [...prevCaptions];
+      nextCaptions[idx] = value;
+      return nextCaptions;
+    });
+  };
+
   // const handleChangeInput = e => {
   // 	if (isObject(e) && has(e, 'value')) {
   // 		setInputMessage(e.value);
@@ -926,8 +1011,11 @@ const MessageInputCustom = props => {
             // The third parameter is required for server
             //formData.append('file', result, result.name);
 
+            // Leyenda de ESTA foto (idx), no un texto compartido -- vacia
+            // si el asesor no escribio nada para ella (comportamiento
+            // identico al actual cuando no hay leyenda).
             formData.append("medias", media, media.name);
-            formData.append("body", media.name);
+            formData.append("captions", mediaCaptions[idx] || "");
           },
           error(err) {
             alert("erro");
@@ -936,7 +1024,7 @@ const MessageInputCustom = props => {
         });
       } else {
         formData.append("medias", media);
-        formData.append("body", media.name);
+        formData.append("captions", mediaCaptions[idx] || "");
       }
     });
 
@@ -1139,34 +1227,66 @@ const MessageInputCustom = props => {
   if (medias.length > 0)
     return (
       <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
-        <IconButton
-          aria-label="cancel-upload"
-          component="span"
-          disabled={disableOption}
-          onClick={e => setMedias([])}
-        >
-          <CancelIcon className={classes.sendMessageIcons} />
-        </IconButton>
+        <div className={classes.mediaPreviewHeader}>
+          <IconButton
+            aria-label="cancel-upload"
+            component="span"
+            disabled={disableOption}
+            onClick={e => setMedias([])}
+          >
+            <CancelIcon className={classes.sendMessageIcons} />
+          </IconButton>
 
-        {loading ? (
-          <div>
-            {/*<CircularProgress className={classes.circleLoading} />*/}
-            <LinearWithValueLabel progress={percentLoading} />
-          </div>
-        ) : (
-          <span>
-            {medias[0]?.name}
-            {/* <img src={media.preview} alt=""></img> */}
-          </span>
+          {loading ? (
+            <div>
+              {/*<CircularProgress className={classes.circleLoading} />*/}
+              <LinearWithValueLabel progress={percentLoading} />
+            </div>
+          ) : (
+            <div className={classes.mediaThumbStrip}>
+              {medias.map((media, idx) => (
+                <div
+                  key={idx}
+                  className={clsx(classes.mediaThumb, {
+                    [classes.mediaThumbActive]: idx === activeMediaIndex
+                  })}
+                  onClick={() => setActiveMediaIndex(idx)}
+                >
+                  {mediaPreviews[idx] ? (
+                    <img src={mediaPreviews[idx]} alt={media.name} />
+                  ) : (
+                    <span className={classes.mediaThumbName}>
+                      {media.name}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <IconButton
+            aria-label="send-upload"
+            component="span"
+            onClick={handleUploadMedia}
+            disabled={disableOption}
+          >
+            <SendIcon className={classes.sendMessageIcons} />
+          </IconButton>
+        </div>
+
+        {!loading && (
+          <InputBase
+            className={classes.mediaCaptionInput}
+            placeholder={i18n.t("messagesInput.placeholderOpen")}
+            multiline
+            maxRows={3}
+            value={mediaCaptions[activeMediaIndex] || ""}
+            onChange={e =>
+              handleChangeCaption(activeMediaIndex, e.target.value)
+            }
+            disabled={disableOption}
+          />
         )}
-        <IconButton
-          aria-label="send-upload"
-          component="span"
-          onClick={handleUploadMedia}
-          disabled={disableOption}
-        >
-          <SendIcon className={classes.sendMessageIcons} />
-        </IconButton>
       </Paper>
     );
   else {

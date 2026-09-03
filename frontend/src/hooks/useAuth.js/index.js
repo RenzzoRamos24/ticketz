@@ -14,6 +14,38 @@ import { decodeToken } from "react-jwt";
 
 let apiInterceptorsRegistered = false;
 
+// PALAZ patch — refresco de sesion "single-flight" (Principio I,
+// excepcion septima; specs/000-despliegue-ticketz-vps/research.md
+// R-090/R-091; docs/propuesta-enmienda-constitucion-9.0.0.md).
+//
+// Antes: cada peticion que fallaba con 403, y por separado el efecto de
+// montaje de la app, disparaban CADA UNA su propio POST
+// /auth/refresh_token, sin coordinarse. Con varias peticiones fallando
+// casi a la vez (patron real tras un login, mas pronunciado en cuentas
+// admin), salian varios refrescos concurrentes — y en cuanto CUALQUIERA
+// de ellos devolvia un error, el interceptor de 401 borraba la sesion
+// completa del navegador aunque el servidor nunca la habia invalidado.
+//
+// refreshSession() comparte un unico refresco en vuelo entre todos los
+// que lo pidan al mismo tiempo — nunca hay mas de un POST
+// /auth/refresh_token simultaneo.
+let refreshPromise = null;
+function refreshSession() {
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post("/auth/refresh_token")
+      .then(({ data }) => {
+        localStorage.setItem("token", JSON.stringify(data.token));
+        api.defaults.headers.Authorization = `Bearer ${data.token}`;
+        return data;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 const useAuth = () => {
   const history = useHistory();
   const [isAuth, setIsAuth] = useState(false);
@@ -48,17 +80,33 @@ const useAuth = () => {
       },
       async error => {
         const originalRequest = error.config;
-        if (error?.response?.status === 403 && !originalRequest._retry) {
-          originalRequest._retry = true;
+        const status = error?.response?.status;
+        // PALAZ patch (excepcion septima) — ver comentario junto a
+        // refreshSession() mas arriba en este fichero.
+        const isRefreshCall = originalRequest?.url?.endsWith(
+          "/auth/refresh_token"
+        );
 
-          const { data } = await api.post("/auth/refresh_token");
-          if (data) {
-            localStorage.setItem("token", JSON.stringify(data.token));
-            api.defaults.headers.Authorization = `Bearer ${data.token}`;
+        if (
+          (status === 401 || status === 403) &&
+          !isRefreshCall &&
+          !originalRequest._retry
+        ) {
+          originalRequest._retry = true;
+          try {
+            await refreshSession();
+            return api(originalRequest);
+          } catch (refreshErr) {
+            clearAllCachedSettings();
+            localStorage.removeItem("token");
+            localStorage.removeItem("companyId");
+            api.defaults.headers.Authorization = undefined;
+            setIsAuth(false);
+            return Promise.reject(refreshErr);
           }
-          return api(originalRequest);
         }
-        if (error?.response?.status === 401) {
+
+        if (status === 401 && isRefreshCall) {
           clearAllCachedSettings();
           localStorage.removeItem("token");
           localStorage.removeItem("companyId");
@@ -75,9 +123,7 @@ const useAuth = () => {
     (async () => {
       if (token) {
         try {
-          const { data } = await api.post("/auth/refresh_token");
-          localStorage.setItem("token", JSON.stringify(data.token));
-          api.defaults.headers.Authorization = `Bearer ${data.token}`;
+          const data = await refreshSession();
           socketManager.syncCurrentSocketToken?.(data.token);
           setIsAuth(true);
           setUser(data.user);

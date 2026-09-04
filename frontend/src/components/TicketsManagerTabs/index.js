@@ -21,7 +21,7 @@ import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
-import TicketsQueueSelect from "../TicketsQueueSelect";
+import TicketsQueueSelect, { NO_QUEUE_SENTINEL } from "../TicketsQueueSelect";
 import { Box, Button } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
@@ -126,7 +126,15 @@ const TicketsManagerTabs = () => {
   const [pendingCount, setPendingCount] = useState(0);
 
   const userQueueIds = user.queues.map(q => q.id);
-  const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
+  // PALAZ patch — "Sin cola" como filtro seleccionable (Principio I,
+  // excepción cuarta; R-094). Viene MARCADA por defecto para administradores,
+  // de modo que el comportamiento de origen no cambia salvo que alguien la
+  // desmarque a propósito. Los asesores no reciben el centinela: para ellos
+  // nada cambia en absoluto.
+  const isAdmin = user.profile === "admin";
+  const [selectedQueueIds, setSelectedQueueIds] = useState(
+    isAdmin ? [...(userQueueIds || []), NO_QUEUE_SENTINEL] : userQueueIds || []
+  );
   const [selectedContact, setSelectedContact] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -316,6 +324,7 @@ const TicketsManagerTabs = () => {
           style={{ marginLeft: 6 }}
           selectedQueueIds={selectedQueueIds}
           userQueues={user?.queues}
+          showNoQueueOption={isAdmin}
           onChange={values => setSelectedQueueIds(values)}
         />
       </Paper>

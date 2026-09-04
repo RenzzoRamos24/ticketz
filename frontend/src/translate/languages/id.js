@@ -377,7 +377,8 @@ const messages = {
         }
       },
       ticketsQueueSelect: {
-        placeholder: "Antrian"
+        placeholder: "Antrian",
+        noQueue: "Tanpa antrian"
       },
       tickets: {
         toasts: {

@@ -16,6 +16,8 @@ import TicketsListSkeleton from "../TicketsListSkeleton";
 import useTickets from "../../hooks/useTickets";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+// PALAZ patch (excepción cuarta, R-094) — centinela de "sin cola".
+import { NO_QUEUE_SENTINEL } from "../TicketsQueueSelect";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import toastError from "../../errors/toastError";
 
@@ -288,12 +290,24 @@ const TicketsListCustom = props => {
           )) &&
         (!users?.length || users.some(u => u === ticket.userId)) &&
         (!ticket.userId || ticket.userId === user?.id || showAll) &&
-        (!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1)
+        // PALAZ patch — "Sin cola" como filtro seleccionable (Principio I,
+        // excepción cuarta; R-094). Antes: `!ticket.queueId` hacía que TODO
+        // ticket huérfano pasara el filtro en vivo, sin importar la
+        // selección — así que arreglar solo la consulta del backend habría
+        // dejado que se colaran igual en cuanto llegara uno nuevo por socket.
+        (ticket.queueId
+          ? selectedQueueIds.indexOf(ticket.queueId) > -1
+          : selectedQueueIds.indexOf(NO_QUEUE_SENTINEL) > -1)
       );
     };
 
+    // PALAZ patch (excepción cuarta, R-094) — un ticket sin cola ahora SÍ
+    // puede "no pertenecer" a la selección, y por tanto retirarse de la
+    // lista. Antes `ticket.queueId &&` lo hacía imposible.
     const notBelongsToUserQueues = ticket =>
-      ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
+      ticket.queueId
+        ? selectedQueueIds.indexOf(ticket.queueId) === -1
+        : selectedQueueIds.indexOf(NO_QUEUE_SENTINEL) === -1;
 
     const onConnectTicketList = () => {
       if (status) {

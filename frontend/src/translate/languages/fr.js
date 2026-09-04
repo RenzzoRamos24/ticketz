@@ -369,7 +369,8 @@ const messages = {
         }
       },
       ticketsQueueSelect: {
-        placeholder: "Files d'attente"
+        placeholder: "Files d'attente",
+        noQueue: "Sans file d'attente"
       },
       tickets: {
         toasts: {

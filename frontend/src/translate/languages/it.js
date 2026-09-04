@@ -367,7 +367,8 @@ const messages = {
         }
       },
       ticketsQueueSelect: {
-        placeholder: "Code"
+        placeholder: "Code",
+        noQueue: "Senza coda"
       },
       tickets: {
         toasts: {

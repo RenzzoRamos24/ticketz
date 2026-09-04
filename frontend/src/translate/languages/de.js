@@ -371,7 +371,8 @@ const messages = {
         }
       },
       ticketsQueueSelect: {
-        placeholder: "Warteschlangen"
+        placeholder: "Warteschlangen",
+        noQueue: "Ohne Warteschlange"
       },
       tickets: {
         toasts: {

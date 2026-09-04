@@ -433,7 +433,8 @@ const messages = {
         }
       },
       ticketsQueueSelect: {
-        placeholder: "Queues"
+        placeholder: "Queues",
+        noQueue: "No queue"
       },
       tickets: {
         toasts: {

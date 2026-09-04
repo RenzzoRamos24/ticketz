@@ -113,10 +113,31 @@ const ListTicketsService = async ({
   // string a mano) al pasarlos como `replacements` en Ticket.findAll().
   const replacements: Record<string, Date> = {};
 
+  // PALAZ patch — "Sin cola" como filtro seleccionable (Principio I,
+  // excepción cuarta; R-094; docs/propuesta-patch-006-filtro-sin-cola.md).
+  //
+  // Antes: si el perfil era admin, Ticketz añadía `null` al filtro SIEMPRE,
+  // sin importar qué colas se hubieran seleccionado — los tickets sin cola
+  // ("Sem fila") se colaban en toda vista filtrada. Con 78 de 89 tickets
+  // pendientes sin cola en producción, eso ahogaba el resultado al filtrar
+  // por la cola de un asesor concreto.
+  //
+  // Ahora los tickets sin cola se incluyen SOLO si el centinela viene en
+  // `queueIds`, igual que cualquier otra cola. Se sigue restringiendo a
+  // admin: los asesores nunca vieron tickets huérfanos y este parche NO
+  // puede ampliarles lo que ven — condición (b) de la cuarta excepción.
+  const NO_QUEUE_SENTINEL = 0;
+  const canFilterNoQueue = user.profile === "admin";
+  const noQueueSelected =
+    canFilterNoQueue && (queueIds || []).includes(NO_QUEUE_SENTINEL);
+  // El centinela nunca puede llegar a la consulta como si fuera un id real:
+  // los id de cola son enteros positivos, 0 está reservado.
+  const realQueueIds = (queueIds || []).filter(id => id !== NO_QUEUE_SENTINEL);
+
   let whereCondition: Filterable["where"] = {
     [Op.and]: andedOrs,
     queueId: {
-      [Op.or]: user.profile === "admin" ? [queueIds, null] : [queueIds]
+      [Op.or]: noQueueSelected ? [realQueueIds, null] : [realQueueIds]
     }
   };
 
@@ -158,7 +179,12 @@ const ListTicketsService = async ({
     andedOrs.length = 0;
     whereCondition = {
       [Op.and]: andedOrs,
-      queueId: { [Op.or]: [queueIds, null] }
+      // PALAZ patch (excepción cuarta, R-094) — misma regla que arriba:
+      // "sin cola" solo si el centinela fue seleccionado. Esta rama ya es
+      // admin-only por la condición del `if`.
+      queueId: {
+        [Op.or]: noQueueSelected ? [realQueueIds, null] : [realQueueIds]
+      }
     };
     if (groupsTab) {
       whereCondition.isGroup = groups === "true";

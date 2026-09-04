@@ -1220,6 +1220,8 @@ const messages = {
           "El backend se está iniciando y aún no está listo. Reintentando automáticamente."
       },
       backendErrors: {
+        ERR_SESSION_LIMIT_REACHED:
+          "Se cerró esta sesión porque tu cuenta superó el máximo de dispositivos conectados a la vez.",
         ERR_FORBIDDEN: "No tienes permisos para acceder a este recurso.",
         ERR_CHECK_NUMBER: "No se pudo verificar el número de WhatsApp.",
         ERR_NO_OTHER_WHATSAPP:

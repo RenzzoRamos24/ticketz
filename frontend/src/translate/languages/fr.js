@@ -1095,6 +1095,8 @@ const messages = {
           "Le backend démarre et n'est pas encore prêt. Nouvelle tentative automatique."
       },
       backendErrors: {
+        ERR_SESSION_LIMIT_REACHED:
+          "Cette session a été fermée car votre compte a dépassé le nombre maximal d'appareils simultanés.",
         ERR_NO_OTHER_WHATSAPP:
           "Il doit y avoir au moins un WhatsApp par défaut.",
         ERR_NO_DEF_WAPP_FOUND:

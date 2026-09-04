@@ -35,6 +35,8 @@ import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
 import DarkMode from "../components/DarkMode";
 import { i18n } from "../translate/i18n";
+// PALAZ patch (excepción octava, R-095) — leer el sessionId del token.
+import { decodeToken } from "react-jwt";
 import { messages } from "../translate/languages";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
@@ -452,19 +454,39 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
     const socket = socketManager.GetSocket(companyId);
 
+    // PALAZ patch — multi-dispositivo (Principio I, excepción OCTAVA;
+    // R-095; docs/propuesta-enmienda-constitucion-10.0.0.md).
+    //
+    // ANTES: cualquier login de la misma cuenta en otro sitio cerraba ESTA
+    // sesión (`action: "update"` bastaba). Por eso una cuenta solo podía
+    // estar activa en un dispositivo: no era un bloqueo del segundo
+    // ingreso, era una expulsión del primero.
+    //
+    // AHORA solo se cierra si el backend lo pide EXPRESAMENTE para nuestro
+    // propio sessionId (`action: "evict-session"`), lo que ocurre solo al
+    // superarse el límite de dispositivos y siempre sobre la sesión más
+    // antigua. Un login que no supera el límite ya no expulsa a nadie.
     const onCompanyAuthLayout = data => {
       const impersonated = localStorage.getItem("impersonated") === "true";
-      if (
-        !impersonated &&
-        !data.user.impersonated &&
-        data.user.id === +userId
-      ) {
-        toastError("Sua conta foi acessada em outro computador.");
-        setTimeout(() => {
-          localStorage.clear();
-          window.location.reload();
-        }, 1000);
+      if (impersonated || data.user?.impersonated) return;
+      if (data.user?.id !== +userId) return;
+      if (data.action !== "evict-session") return;
+
+      // El sessionId propio viaja dentro del token de acceso.
+      let mySessionId = null;
+      try {
+        const stored = localStorage.getItem("token");
+        if (stored) mySessionId = decodeToken(JSON.parse(stored))?.sessionId;
+      } catch (_) {
+        mySessionId = null;
       }
+      if (!mySessionId || mySessionId !== data.sessionId) return;
+
+      toastError(i18n.t("backendErrors.ERR_SESSION_LIMIT_REACHED"));
+      setTimeout(() => {
+        localStorage.clear();
+        window.location.reload();
+      }, 1000);
     };
 
     socket.on(`company-${companyId}-auth`, onCompanyAuthLayout);

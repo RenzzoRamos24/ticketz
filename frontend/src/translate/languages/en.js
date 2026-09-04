@@ -1211,6 +1211,8 @@ const messages = {
           "Backend is starting up and not ready yet. Retrying automatically."
       },
       backendErrors: {
+        ERR_SESSION_LIMIT_REACHED:
+          "This session was closed because your account exceeded the maximum number of simultaneous devices.",
         ERR_UNAUTHORIZED: "You are not authorized to perform this action.",
         ERR_FORBIDDEN: "You do not have permission to access this resource.",
         ERR_CHECK_NUMBER: "Check the number and try again.",

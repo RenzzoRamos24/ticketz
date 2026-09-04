@@ -121,6 +121,19 @@ export const initIO = (httpServer: Server): SocketIO => {
     const counters = new CounterManager();
 
     let user: User = null;
+    // PALAZ patch — multi-dispositivo (Principio I, excepción OCTAVA;
+    // R-095). Se guarda el sessionId del token en el propio socket y se
+    // entra a una sala por sesión, para poder cerrar UNA sesión concreta
+    // (condición e: cierre dirigido, nunca difusión a todas).
+    // Sin migración de esquema: este estado ya es efímero por diseño —
+    // al arrancar, Ticketz marca todas las UserSocketSessions inactivas.
+    const sessionId = (tokenData as { sessionId?: string }).sessionId;
+    socket.data.sessionId = sessionId;
+    socket.data.connectedAt = Date.now();
+    if (sessionId) {
+      socket.join(`session-${sessionId}`);
+    }
+
     const userId = tokenData.id;
 
     if (userId && userId !== "undefined" && userId !== "null") {

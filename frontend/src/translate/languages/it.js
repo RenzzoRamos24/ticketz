@@ -1089,6 +1089,8 @@ const messages = {
           "Il backend si sta avviando e non è ancora pronto. Nuovo tentativo automatico."
       },
       backendErrors: {
+        ERR_SESSION_LIMIT_REACHED:
+          "Questa sessione è stata chiusa perché il tuo account ha superato il numero massimo di dispositivi simultanei.",
         ERR_NO_OTHER_WHATSAPP: "Deve esserci almeno un WhatsApp predefinito.",
         ERR_NO_DEF_WAPP_FOUND:
           "Nessun WhatsApp predefinito trovato. Controlla la pagina delle connessioni.",

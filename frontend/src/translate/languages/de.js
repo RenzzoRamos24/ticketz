@@ -1099,6 +1099,8 @@ const messages = {
           "Das Backend startet noch und ist noch nicht bereit. Automatischer neuer Versuch."
       },
       backendErrors: {
+        ERR_SESSION_LIMIT_REACHED:
+          "Diese Sitzung wurde beendet, da Ihr Konto die maximale Anzahl gleichzeitiger Geräte überschritten hat.",
         ERR_NO_OTHER_WHATSAPP:
           "Es muss mindestens ein Standard-WhatsApp geben.",
         ERR_NO_DEF_WAPP_FOUND:

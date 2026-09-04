@@ -1214,6 +1214,8 @@ const messages = {
           "O backend está iniciando e ainda não está pronto. Tentando novamente automaticamente."
       },
       backendErrors: {
+        ERR_SESSION_LIMIT_REACHED:
+          "Esta sessão foi encerrada porque sua conta excedeu o máximo de dispositivos simultâneos.",
         ERR_UNAUTHORIZED: "Você não está autorizado a acessar este recurso.",
         ERR_FORBIDDEN: "Você não tem permissão para acessar este recurso.",
         ERR_CHECK_NUMBER: "Número não encontrado no Whatsapp.",

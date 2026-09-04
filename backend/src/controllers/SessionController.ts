@@ -29,15 +29,70 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     "_"
   );
 
-  const { token, serializedUser, refreshToken } = await AuthUserService({
-    email,
-    password,
-    language
-  });
+  const { token, serializedUser, refreshToken, sessionId } =
+    await AuthUserService({
+      email,
+      password,
+      language
+    });
 
   SendRefreshToken(res, refreshToken);
 
   const io = getIO();
+
+  // PALAZ patch — multi-dispositivo (Principio I, excepción OCTAVA; R-095;
+  // docs/propuesta-enmienda-constitucion-10.0.0.md).
+  //
+  // COMPORTAMIENTO ORIGINAL DE TICKETZ que se cambia A PROPÓSITO
+  // (condición a — esto NO corrige un defecto, cambia una decisión de
+  // diseño del proyecto de terceros): antes se emitía este evento a
+  // `user-<id>` y el frontend cerraba la sesión de CUALQUIER otro
+  // dispositivo, así que una cuenta solo podía estar activa en uno.
+  //
+  // Ahora se admiten hasta MAX_ACTIVE_SESSIONS dispositivos a la vez.
+  // Valor confirmado por escrito por Renzo antes de escribir código
+  // (condición b — está PROHIBIDO dejarlo ilimitado: una cuenta sin tope
+  // es indistinguible de una credencial compartida y destruye la
+  // atribución por asesor). Al superarse, se cierra la sesión MÁS
+  // ANTIGUA, también decisión explícita de Renzo (2026-09-04).
+  const MAX_ACTIVE_SESSIONS = 2;
+
+  const connected = await io.in(`user-${serializedUser.id}`).fetchSockets();
+
+  // Un dispositivo = un sessionId. Varias pestañas comparten token, luego
+  // comparten sessionId, luego NO consumen cupo extra (condición j.3).
+  const sessionFirstSeen = new Map<string, number>();
+  connected.forEach(s => {
+    const sid = s.data?.sessionId as string | undefined;
+    if (!sid || sid === sessionId) return;
+    const at = (s.data?.connectedAt as number | undefined) ?? 0;
+    const prev = sessionFirstSeen.get(sid);
+    if (prev === undefined || at < prev) sessionFirstSeen.set(sid, at);
+  });
+
+  // Sesiones anteriores al parche no llevan sessionId en su token: no se
+  // cuentan ni se cierran. Se resuelve solo cuando esa gente vuelva a
+  // entrar; no se fuerza un cierre masivo por un despliegue.
+  const surplus = sessionFirstSeen.size - (MAX_ACTIVE_SESSIONS - 1);
+  if (surplus > 0) {
+    const oldestFirst = [...sessionFirstSeen.entries()].sort(
+      (a, b) => a[1] - b[1]
+    );
+    oldestFirst.slice(0, surplus).forEach(([sid]) => {
+      // Cierre DIRIGIDO a una sala de una sola sesión (condición e), en
+      // vez de la difusión indiscriminada a `user-<id>` de antes.
+      io.to(`session-${sid}`).emit(`company-${serializedUser.companyId}-auth`, {
+        action: "evict-session",
+        sessionId: sid,
+        user: {
+          id: serializedUser.id,
+          email: serializedUser.email,
+          companyId: serializedUser.companyId
+        }
+      });
+    });
+  }
+
   io.to(`user-${serializedUser.id}`).emit(
     `company-${serializedUser.companyId}-auth`,
     {

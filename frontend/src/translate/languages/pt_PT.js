@@ -1150,6 +1150,8 @@ const messages = {
           "O backend está a iniciar e ainda não está pronto. A tentar novamente automaticamente."
       },
       backendErrors: {
+        ERR_SESSION_LIMIT_REACHED:
+          "Esta sessão foi encerrada porque a sua conta excedeu o máximo de dispositivos em simultâneo.",
         ERR_UNAUTHORIZED: "Não autorizado. Por favor, faça o login novamente.",
         ERR_FORBIDDEN:
           "Acesso negado. Você não tem permissão para acessar este recurso.",

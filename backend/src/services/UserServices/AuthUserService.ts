@@ -1,4 +1,5 @@
 import { Sequelize } from "sequelize";
+import { randomUUID } from "crypto";
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
 import {
@@ -31,6 +32,9 @@ interface Response {
   serializedUser: SerializedUser;
   token: string;
   refreshToken: string;
+  // PALAZ patch (excepción octava, R-095) — identifica este login como un
+  // "dispositivo" para el límite de sesiones simultáneas.
+  sessionId: string;
 }
 
 const AuthUserService = async ({
@@ -64,15 +68,28 @@ const AuthUserService = async ({
     }
   }
 
-  const token = createAccessToken(user);
-  const refreshToken = createRefreshToken(user);
+  // PALAZ patch — multi-dispositivo (Principio I, excepción OCTAVA; R-095;
+  // docs/propuesta-enmienda-constitucion-10.0.0.md).
+  //
+  // `sessionId` YA EXISTÍA en el payload de ambos tokens (CreateTokens.ts)
+  // pero nadie lo rellenaba ni lo leía — igual que estaba `caption` antes
+  // del patch 004. Al poblarlo, cada login queda identificado, y varias
+  // pestañas del mismo navegador comparten token → comparten sessionId →
+  // cuentan como UN dispositivo, no como varios (condición j.3).
+  const sessionId = randomUUID();
+
+  const token = createAccessToken(user, { sessionId });
+  const refreshToken = createRefreshToken(user, { sessionId });
 
   const serializedUser = await SerializeUser(user);
 
   return {
     serializedUser,
     token,
-    refreshToken
+    refreshToken,
+    // PALAZ patch (excepción octava, R-095) — lo consume SessionController
+    // para decidir a qué sesión cerrar si se supera el límite.
+    sessionId
   };
 };
 

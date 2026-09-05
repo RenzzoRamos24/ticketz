@@ -171,6 +171,34 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
   const { user } = useContext(AuthContext);
   const { profile } = user;
 
+  // PALAZ patch — "Espiar Conversa" visible para asesoras en sus propias colas
+  // (Principio I, excepción SEGUNDA; R-097;
+  // docs/propuesta-patch-008-ojito-asesoras.md).
+  //
+  // Antes, el ícono estaba condicionado a `profile === "admin"` en sus dos
+  // apariciones, sin ninguna regla de propiedad del ticket: una asesora no lo
+  // veía nunca, ni siquiera en conversaciones de sus propias colas.
+  //
+  // El diálogo que ese ícono abre (`TicketMessagesDialog`) YA tenía su propia
+  // guarda, y esa guarda YA contemplaba a los no-admin: permite abrir la
+  // conversación si el ticket está en una cola del usuario. El ícono estaba
+  // más restringido que el diálogo que invoca — una inconsistencia interna de
+  // Ticketz, no una política de privacidad.
+  //
+  // Aquí se replica EXACTAMENTE ese mismo criterio, para que el botón y la
+  // guarda dejen de contradecirse. La guarda del diálogo NO se toca: sigue
+  // siendo la que decide de verdad. Un ticket sin cola (`queueId` null) no
+  // hace `some()` verdadero, igual que en el diálogo `find()` devuelve
+  // undefined — coherente en ambos lados.
+  //
+  // Alcance decidido por Renzo (2026-09-05): TODOS los tickets de las colas de
+  // la asesora, incluidos los que atiende otra compañera de la misma cola.
+  // No amplía qué conversaciones puede leer: son las que ya ve en su lista y
+  // ya puede abrir con un clic (condición b de la segunda excepción).
+  const podeEspiarConversa =
+    profile === "admin" ||
+    (user?.queues || []).some(q => q.id === ticket.queueId);
+
   useEffect(() => {
     if (ticket.userId && ticket.user) {
       setTicketUser(ticket.user.name);
@@ -294,7 +322,7 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
               />
             </Tooltip>
           )}
-          {profile === "admin" && (
+          {podeEspiarConversa && (
             <Tooltip title="Espiar Conversa">
               <VisibilityIcon
                 onClick={e => {
@@ -438,7 +466,7 @@ const TicketListItemCustom = ({ ticket, setTabOpen, groupActionButtons }) => {
               </Tooltip>
             )}
 
-          {profile === "admin" && (groupActionButtons || !ticket.isGroup) && (
+          {podeEspiarConversa && (groupActionButtons || !ticket.isGroup) && (
             <Tooltip title="Espiar Conversa">
               <VisibilityIcon
                 onClick={e => {

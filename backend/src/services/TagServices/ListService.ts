@@ -45,13 +45,15 @@ const ListService = async ({
         model: TicketTag,
         as: "ticketTags",
         attributes: ["ticketId"],
-        required: false
+        required: false,
+        separate: true
       },
       {
         model: ContactTag,
         as: "contactTags",
         attributes: ["contactId"],
-        required: false
+        required: false,
+        separate: true
       }
     ],
     attributes: ["id", "name", "color", "ticketsCount", "contactsCount"]

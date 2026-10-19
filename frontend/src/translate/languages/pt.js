@@ -452,8 +452,8 @@ const messages = {
         },
         search: {
           placeholder: "Buscar atendimento e mensagens",
-          filterByDateFrom: "Lead novo de",
-          filterByDateTo: "Lead novo até"
+          filterByDateFrom: "De",
+          filterByDateTo: "Até"
         },
         buttons: {
           showAll: "Todos"

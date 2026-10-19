@@ -454,8 +454,8 @@ const messages = {
           placeholder: "Search for ticket and messages",
           filterByTags: "Filter by tags",
           filterByUsers: "Filter by users",
-          filterByDateFrom: "New lead from",
-          filterByDateTo: "New lead to"
+          filterByDateFrom: "From",
+          filterByDateTo: "To"
         },
         buttons: {
           showAll: "All"

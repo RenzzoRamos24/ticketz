@@ -455,8 +455,8 @@ const messages = {
         },
         search: {
           placeholder: "Buscar atención y mensajes",
-          filterByDateFrom: "Lead nuevo desde",
-          filterByDateTo: "Lead nuevo hasta"
+          filterByDateFrom: "Desde",
+          filterByDateTo: "Hasta"
         },
         buttons: {
           showAll: "Todos"

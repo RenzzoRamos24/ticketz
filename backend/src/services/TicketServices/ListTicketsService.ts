@@ -284,11 +284,45 @@ const ListTicketsService = async ({
     replacements.messageDateFrom = startOfDay(parseISO(messageDateFrom));
     replacements.messageDateTo = endOfDay(parseISO(messageDateTo));
 
+    // PALAZ patch 012 — el periodo ya NO filtra por "hubo actividad en el
+    // rango", sino por "el LEAD habló por primera vez dentro del rango"
+    // (decisión de Renzo, 2026-10-19). El criterio anterior devolvía
+    // también conversaciones viejas que solo habían tenido movimiento:
+    // medido sobre producción del 1 al 19 de octubre, 1.382 tickets, de
+    // los cuales 219 eran de agosto o septiembre. El criterio nuevo
+    // devuelve 1.155.
+    //
+    // Se mira el histórico del CONTACTO, no el del ticket: un lead que
+    // vuelve abre un ticket nuevo, y ese ticket nuevo no es un lead
+    // nuevo. Y se cuentan solo los mensajes ENTRANTES (`fromMe = false`)
+    // — "habló el lead" es que escribió él, no que le escribimos
+    // nosotros. En la base de hoy hay 24.074 contactos sin un solo
+    // mensaje entrante (la importación masiva de contactos de Whaticket):
+    // con `fromMe = false` quedan fuera solos, sin ninguna regla extra.
+    //
+    // Por eso tampoco sirve `Contacts.createdAt`: esos 24.074 se crearon
+    // todos el mismo día de la importación, no el día que hablaron.
+    //
+    // HAVING sin GROUP BY: la subconsulta agregada devuelve UNA fila, y
+    // el HAVING la descarta si el MIN cae fuera del rango. Si el contacto
+    // no tiene ningún mensaje entrante, MIN es NULL, el HAVING es NULL y
+    // EXISTS da falso — que es justo lo que queremos. Esta forma evalúa
+    // el MIN UNA vez; escribirlo como subconsulta escalar con BETWEEN lo
+    // evalúa dos (comprobado con EXPLAIN ANALYZE: 352 ms contra 15 ms).
+    //
+    // Medido en producción con EXPLAIN (ANALYZE) el 2026-10-19, sobre
+    // 3.424 tickets y 35.379 mensajes:
+    //   criterio anterior (actividad en el rango): 19,8 ms
+    //   criterio nuevo (primer mensaje del lead):  14,6 ms
+    // Usa el índice ya existente
+    // idx_messages_contactid_fromme_ticketid_createdat — no hace falta
+    // crear ninguno, y este parche NO toca el esquema.
     andedOrs.push(
       literal(`EXISTS (
         SELECT 1 FROM "Messages" m
-        WHERE m."ticketId" = "Ticket"."id"
-          AND m."createdAt" BETWEEN :messageDateFrom AND :messageDateTo
+        WHERE m."contactId" = "Ticket"."contactId"
+          AND m."fromMe" = false
+        HAVING MIN(m."createdAt") BETWEEN :messageDateFrom AND :messageDateTo
       )`) as unknown as WhereOptions<Ticket>
     );
   }
